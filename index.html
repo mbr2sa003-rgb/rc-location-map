@@ -35,14 +35,8 @@
     padding: 20px;
     text-align: center;
   }
-  #loginScreen h1 {
-    color: #1b5e20;
-    margin-bottom: 4px;
-  }
-  #loginScreen p {
-    color: #4a5c50;
-    max-width: 340px;
-  }
+  #loginScreen h1 { color: #1b5e20; margin-bottom: 4px; }
+  #loginScreen p { color: #4a5c50; max-width: 340px; }
   #errorBox {
     color: #b3261e;
     background: #fdecea;
@@ -52,7 +46,7 @@
     display: none;
     max-width: 340px;
   }
-  #appScreen { display: none; height: 100vh; flex-direction: column; }
+  #appScreen { display: none; height: 100vh; flex-direction: column; position: relative; }
   #topBar {
     background: #1b5e20;
     color: white;
@@ -62,8 +56,9 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
+    z-index: 10;
   }
-  #topBar .userInfo { font-size: 14px; }
+  #topBar .userInfo { font-size: 13px; }
   #topBar button {
     background: #2e7d32;
     color: white;
@@ -76,13 +71,14 @@
   #topBar button:hover { background: #256428; }
   #topBar button.secondary { background: #6d6d6d; }
   #topBar button.secondary:hover { background: #555; }
-  #searchBox { display: flex; gap: 6px; flex: 1; min-width: 200px; max-width: 320px; }
+  #searchBox { display: flex; gap: 6px; flex: 1; min-width: 180px; max-width: 300px; }
   #searchBox input {
     flex: 1;
     padding: 7px 10px;
     border-radius: 6px;
     border: none;
     font-size: 14px;
+    min-width: 0;
   }
   #searchBox button {
     background: #f9a825;
@@ -109,90 +105,71 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   }
   #map { flex: 1; width: 100%; }
+
+  /* Single unified pin panel - collapsed to a slim strip, expandable */
   #pinPanel {
     display: none;
     position: fixed;
-    top: 54px; left: 0; right: 0;
+    top: 52px; right: 10px;
+    width: 320px;
+    max-width: calc(100vw - 20px);
     background: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    padding: 14px 16px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    border-radius: 10px;
     z-index: 25;
-    max-height: 62vh;
+    max-height: 78vh;
     overflow-y: auto;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
   }
-  #pinPanel label { display: block; margin-top: 10px; font-size: 13px; color: #444; }
+  #pinPanel .panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #1b5e20;
+    color: white;
+    border-radius: 10px 10px 0 0;
+    position: sticky;
+    top: 0;
+  }
+  #pinPanel .panelHeader button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  #pinPanel .panelBody { padding: 12px 14px 16px; }
+  #pinPanel label { display: block; margin-top: 10px; font-size: 12px; color: #444; }
   #pinPanel input, #pinPanel textarea, #pinPanel select {
     width: 100%;
-    padding: 8px;
+    padding: 7px;
     border: 1px solid #ccc;
     border-radius: 6px;
-    font-size: 14px;
-    margin-top: 4px;
+    font-size: 13px;
+    margin-top: 3px;
   }
-  #pinPanel .rowBtns { display: flex; gap: 10px; margin-top: 14px; }
+  #pinPanel .rowBtns { display: flex; gap: 8px; margin-top: 14px; }
   #pinPanel .rowBtns button {
     flex: 1;
-    padding: 10px;
+    padding: 9px;
     border-radius: 6px;
     border: none;
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
   }
   #savePinBtn { background: #1b5e20; color: white; }
   #cancelPinBtn { background: #eee; color: #333; }
-  #locationSearchPanel {
+  #tapMapHint, #locationSetHint {
     display: none;
-    position: fixed;
-    top: 60px; left: 0; right: 0;
-    background: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-    padding: 16px;
-    z-index: 20;
-    max-width: 420px;
-    margin: 0 auto;
-    border-radius: 0 0 10px 10px;
-  }
-  #locationSearchPanel label { display: block; margin-top: 10px; font-size: 13px; color: #444; }
-  #locationSearchPanel select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 14px;
-    margin-top: 4px;
-  }
-  #locationSearchPanel .rowBtns { display: flex; gap: 10px; margin-top: 14px; }
-  #locationSearchPanel .rowBtns button {
-    flex: 1;
-    padding: 10px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-    background: #eee;
-    color: #333;
-  }
-  #villageSelectedHint {
-    margin-top: 12px;
-    background: #e8f5e9;
-    color: #1b5e20;
+    margin-top: 10px;
     padding: 8px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
   }
-  #pinModeHint {
-    display: none;
-    position: fixed;
-    top: 60px; left: 0; right: 0;
-    text-align: center;
-    background: #fff3cd;
-    color: #664d03;
-    padding: 8px;
-    font-size: 14px;
-    z-index: 15;
-  }
+  #tapMapHint { background: #fff3cd; color: #664d03; }
+  #locationSetHint { background: #e8f5e9; color: #1b5e20; }
   .infoWindowContent { font-size: 14px; }
   .infoWindowContent .dirBtn {
     display: inline-block;
@@ -241,53 +218,47 @@
   <div id="topBar">
     <div class="userInfo" id="userInfo"></div>
     <div id="searchBox">
-      <input type="text" id="searchChildId" placeholder="Find RC by Child ID / ស្វែងរកតាមលេខសម្គាល់">
+      <input type="text" id="searchChildId" placeholder="Find RC by Child ID">
       <button id="searchBtn">🔍 Find</button>
     </div>
     <div>
-      <button id="togglePinModeBtn">➕ Pin New RC / បញ្ចូលទីតាំងថ្មី</button>
+      <button id="togglePinModeBtn">➕ Pin New RC</button>
       <button class="secondary" id="signOutBtn">Sign out</button>
     </div>
   </div>
-  <div id="pinModeHint">📍 Tap on the map to place a pin at this RC's home / ចុចលើផែនទីដើម្បីកំណត់ទីតាំង</div>
   <div id="geocodeStatus"></div>
   <div id="map"></div>
 </div>
 
-<!-- STEP 1: Location search panel (shown first, before tapping the map) -->
-<div id="locationSearchPanel">
-  <strong>Step 1: Find the area / ជំហានទី១៖ ស្វែងរកតំបន់</strong>
-
-  <label>District / ស្រុក</label>
-  <select id="pinDistrict"><option value="">-- Select District --</option></select>
-
-  <label>Commune / ឃុំ</label>
-  <select id="pinCommune" disabled><option value="">-- Select District first --</option></select>
-
-  <label>Village / ភូមិ</label>
-  <select id="pinVillage" disabled><option value="">-- Select Commune first --</option></select>
-
-  <div id="villageSelectedHint" style="display:none;">
-    ✅ Map is now zoomed to this village. Tap on the map to place the pin at the RC's home.
-  </div>
-
-  <div class="rowBtns">
-    <button id="closeLocationSearchBtn">Close</button>
-  </div>
-</div>
-
-<!-- PIN DETAILS PANEL (shown after tapping map in pin mode) -->
+<!-- SINGLE PIN PANEL: District -> Commune -> Village -> tap map -> Child -> Notes -> Save -->
 <div id="pinPanel">
-  <strong>Step 2: Confirm the child / ជំហានទី២៖ បញ្ជាក់កុមារ</strong>
+  <div class="panelHeader">
+    <strong>Pin New RC / បញ្ចូលទីតាំងថ្មី</strong>
+    <button id="closePinPanelBtn">✕</button>
+  </div>
+  <div class="panelBody">
+    <label>District / ស្រុក</label>
+    <select id="pinDistrict"><option value="">-- Select District --</option></select>
 
-  <label>Child / កុមារ</label>
-  <select id="pinChildSelect"><option value="">-- No children found for this village --</option></select>
+    <label>Commune / ឃុំ</label>
+    <select id="pinCommune" disabled><option value="">-- Select District first --</option></select>
 
-  <label>Notes (optional) / កំណត់ចំណាំ</label>
-  <textarea id="pinNotes" rows="2" placeholder="e.g. house behind the pagoda"></textarea>
-  <div class="rowBtns">
-    <button id="cancelPinBtn">Cancel</button>
-    <button id="savePinBtn">Save Pin</button>
+    <label>Village / ភូមិ</label>
+    <select id="pinVillage" disabled><option value="">-- Select Commune first --</option></select>
+
+    <div id="tapMapHint">📍 Tap on the map to set the exact location</div>
+    <div id="locationSetHint">✅ Location set — tap the map again to move it</div>
+
+    <label>Child / កុមារ</label>
+    <select id="pinChildSelect" disabled><option value="">-- Select Village first --</option></select>
+
+    <label>Notes (optional) / កំណត់ចំណាំ</label>
+    <textarea id="pinNotes" rows="2" placeholder="e.g. house behind the pagoda"></textarea>
+
+    <div class="rowBtns">
+      <button id="cancelPinBtn">Cancel</button>
+      <button id="savePinBtn">Save Pin</button>
+    </div>
   </div>
 </div>
 
@@ -317,7 +288,7 @@ function handleCredentialResponse(response) {
   showLoading(true);
   fetch(APPS_SCRIPT_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight on Apps Script
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action: 'login', idToken: idToken })
   })
   .then(r => r.json())
@@ -332,7 +303,7 @@ function handleCredentialResponse(response) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appScreen').style.display = 'flex';
     document.getElementById('userInfo').textContent =
-      currentUser.name + ' (' + currentUser.role + ') — ' + currentUser.email;
+      currentUser.name + ' (' + currentUser.role + ')';
     populateDistrictDropdown();
     initMapAndLoadMarkers(data.locations);
   })
@@ -360,7 +331,6 @@ function loadGoogleMapsScript() {
 loadGoogleMapsScript();
 
 function initMapAndLoadMarkers(locations) {
-  // Default center: Phnom Penh. Will re-center on first pin if available.
   const center = locations.length
     ? { lat: parseFloat(locations[0].lat), lng: parseFloat(locations[0].lng) }
     : { lat: 11.5564, lng: 104.9282 };
@@ -376,7 +346,7 @@ function initMapAndLoadMarkers(locations) {
 
     map.addListener('click', (e) => {
       if (!pinMode) return;
-      openPinPanel(e.latLng.lat(), e.latLng.lng());
+      setPinLocation(e.latLng.lat(), e.latLng.lng());
     });
   }
   setup();
@@ -433,16 +403,35 @@ function escapeHtml(str) {
   }[s]));
 }
 
-// ---------- Pin new location: Step 1 = pick area, Step 2 = tap map + pick child ----------
-document.getElementById('togglePinModeBtn').addEventListener('click', () => {
-  document.getElementById('locationSearchPanel').style.display = 'block';
-});
+// ---------- Single unified Pin panel ----------
+document.getElementById('togglePinModeBtn').addEventListener('click', openPinPanelFresh);
+document.getElementById('closePinPanelBtn').addEventListener('click', closePinPanel);
+document.getElementById('cancelPinBtn').addEventListener('click', closePinPanel);
 
-document.getElementById('closeLocationSearchBtn').addEventListener('click', () => {
-  document.getElementById('locationSearchPanel').style.display = 'none';
-  document.getElementById('pinModeHint').style.display = 'none';
+function openPinPanelFresh() {
+  document.getElementById('pinPanel').style.display = 'block';
+  document.getElementById('pinPanel').dataset.lat = '';
+  document.getElementById('pinPanel').dataset.lng = '';
+  document.getElementById('pinDistrict').value = '';
+  document.getElementById('pinCommune').innerHTML = '<option value="">-- Select District first --</option>';
+  document.getElementById('pinCommune').disabled = true;
+  document.getElementById('pinVillage').innerHTML = '<option value="">-- Select Commune first --</option>';
+  document.getElementById('pinVillage').disabled = true;
+  document.getElementById('pinChildSelect').innerHTML = '<option value="">-- Select Village first --</option>';
+  document.getElementById('pinChildSelect').disabled = true;
+  document.getElementById('pinNotes').value = '';
+  document.getElementById('tapMapHint').style.display = 'none';
+  document.getElementById('locationSetHint').style.display = 'none';
+  childrenInSelectedVillage = [];
+  pinMode = true; // map taps are active as soon as the panel is open
+  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
+}
+
+function closePinPanel() {
+  document.getElementById('pinPanel').style.display = 'none';
   pinMode = false;
-});
+  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
+}
 
 function uniqueSorted(arr) {
   return [...new Set(arr.filter(Boolean))].sort();
@@ -459,13 +448,13 @@ document.getElementById('pinDistrict').addEventListener('change', function() {
   const district = this.value;
   const communeSel = document.getElementById('pinCommune');
   const villageSel = document.getElementById('pinVillage');
+  const childSel = document.getElementById('pinChildSelect');
 
   villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
   villageSel.disabled = true;
-  childrenInSelectedVillage = [];
-  document.getElementById('villageSelectedHint').style.display = 'none';
-  document.getElementById('pinModeHint').style.display = 'none';
-  pinMode = false;
+  childSel.innerHTML = '<option value="">-- Select Village first --</option>';
+  childSel.disabled = true;
+  document.getElementById('tapMapHint').style.display = 'none';
 
   if (!district) {
     communeSel.innerHTML = '<option value="">-- Select District first --</option>';
@@ -484,11 +473,11 @@ document.getElementById('pinCommune').addEventListener('change', function() {
   const district = document.getElementById('pinDistrict').value;
   const commune = this.value;
   const villageSel = document.getElementById('pinVillage');
+  const childSel = document.getElementById('pinChildSelect');
 
-  childrenInSelectedVillage = [];
-  document.getElementById('villageSelectedHint').style.display = 'none';
-  document.getElementById('pinModeHint').style.display = 'none';
-  pinMode = false;
+  childSel.innerHTML = '<option value="">-- Select Village first --</option>';
+  childSel.disabled = true;
+  document.getElementById('tapMapHint').style.display = 'none';
 
   if (!commune) {
     villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
@@ -507,22 +496,77 @@ document.getElementById('pinVillage').addEventListener('change', function() {
   const district = document.getElementById('pinDistrict').value;
   const commune = document.getElementById('pinCommune').value;
   const village = this.value;
+  const childSel = document.getElementById('pinChildSelect');
 
   if (!village) {
-    childrenInSelectedVillage = [];
-    document.getElementById('villageSelectedHint').style.display = 'none';
-    document.getElementById('pinModeHint').style.display = 'none';
-    pinMode = false;
+    childSel.innerHTML = '<option value="">-- Select Village first --</option>';
+    childSel.disabled = true;
+    document.getElementById('tapMapHint').style.display = 'none';
     return;
   }
   childrenInSelectedVillage = roster.filter(r => r.district === district && r.commune === commune && r.village === village);
+  childSel.innerHTML = (childrenInSelectedVillage.length
+      ? '<option value="">-- Select Child --</option>'
+      : '<option value="">-- No children found for this village --</option>') +
+    childrenInSelectedVillage.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
+  childSel.disabled = false;
 
   panMapToPlace([village + ', ' + commune + ', ' + district, commune + ', ' + district, district], 15);
 
-  // Now ready to tap the map to place the pin
-  pinMode = true;
-  document.getElementById('villageSelectedHint').style.display = 'block';
-  document.getElementById('pinModeHint').style.display = 'block';
+  document.getElementById('tapMapHint').style.display = 'block';
+  document.getElementById('locationSetHint').style.display = 'none';
+});
+
+function setPinLocation(lat, lng) {
+  const panel = document.getElementById('pinPanel');
+  panel.dataset.lat = lat;
+  panel.dataset.lng = lng;
+  if (tempMarker) tempMarker.setMap(null);
+  tempMarker = new google.maps.Marker({
+    position: { lat, lng }, map, icon: {
+      path: google.maps.SymbolPath.CIRCLE, scale: 8,
+      fillColor: '#e65100', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2
+    }
+  });
+  document.getElementById('tapMapHint').style.display = 'none';
+  document.getElementById('locationSetHint').style.display = 'block';
+}
+
+document.getElementById('savePinBtn').addEventListener('click', () => {
+  const panel = document.getElementById('pinPanel');
+  const childSel = document.getElementById('pinChildSelect');
+  const childId = childSel.value;
+  const childName = childId ? (childSel.options[childSel.selectedIndex].textContent.split(' - ').slice(1).join(' - ')) : '';
+  const notes = document.getElementById('pinNotes').value.trim();
+
+  if (!panel.dataset.lat || !panel.dataset.lng) { alert('Please tap the map to set the location first.'); return; }
+  if (!childId) { alert('Please select a Child from the list.'); return; }
+
+  showLoading(true);
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: 'addLocation',
+      idToken: idToken,
+      childId: childId,
+      lat: panel.dataset.lat,
+      lng: panel.dataset.lng,
+      notes: notes
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    showLoading(false);
+    if (!data.ok) { alert(data.error || 'Could not save.'); return; }
+    addMarkerForLocation({
+      childId, childName, lat: panel.dataset.lat, lng: panel.dataset.lng,
+      pinnedBy: currentUser.email, notes
+    });
+    if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
+    closePinPanel();
+  })
+  .catch(err => { showLoading(false); alert('Network error: ' + err.message); });
 });
 
 // ---------- Search for a pinned RC by Child ID ----------
@@ -554,8 +598,6 @@ function showGeocodeStatus(msg, autoHideMs) {
 }
 
 // Uses OpenStreetMap's free Nominatim geocoding service - no API key or billing needed.
-// Tries progressively shorter addresses if the full one isn't found -
-// e.g. "Village, Commune, District, Cambodia" -> "Commune, District, Cambodia" -> "District, Cambodia"
 let lastGeocodeRequestAt = 0;
 
 function panMapToPlace(addressParts, zoomLevel) {
@@ -572,8 +614,6 @@ function tryGeocodeOSM(addressParts, index, zoomLevel) {
   const query = addressParts.slice(index).join(', ') + ', Cambodia';
   const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kh&q=' + encodeURIComponent(query);
 
-  // Nominatim's fair-use policy asks for roughly 1 request/second max - this small
-  // delay keeps us well within that even if dropdowns are changed quickly.
   const now = Date.now();
   const wait = Math.max(0, 1100 - (now - lastGeocodeRequestAt));
   lastGeocodeRequestAt = now + wait;
@@ -589,7 +629,7 @@ function tryGeocodeOSM(addressParts, index, zoomLevel) {
           map.setZoom(index === 0 ? zoomLevel : Math.max(zoomLevel - (index * 2), 10));
           showGeocodeStatus('Found: ' + results[0].display_name, 3000);
         } else if (index + 1 < addressParts.length) {
-          tryGeocodeOSM(addressParts, index + 1, zoomLevel); // fall back to a broader search
+          tryGeocodeOSM(addressParts, index + 1, zoomLevel);
         } else {
           showGeocodeStatus('Could not find that area on the map automatically. Please pan/zoom manually.', 5000);
         }
@@ -599,73 +639,6 @@ function tryGeocodeOSM(addressParts, index, zoomLevel) {
       });
   }, wait);
 }
-
-function openPinPanel(lat, lng) {
-  const childSel = document.getElementById('pinChildSelect');
-  if (childrenInSelectedVillage.length) {
-    childSel.innerHTML = '<option value="">-- Select Child --</option>' +
-      childrenInSelectedVillage.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
-  } else {
-    childSel.innerHTML = '<option value="">-- No children found for this village, check roster --</option>';
-  }
-
-  document.getElementById('pinPanel').style.display = 'block';
-  document.getElementById('pinPanel').dataset.lat = lat;
-  document.getElementById('pinPanel').dataset.lng = lng;
-  if (tempMarker) tempMarker.setMap(null);
-  tempMarker = new google.maps.Marker({
-    position: { lat, lng }, map, icon: {
-      path: google.maps.SymbolPath.CIRCLE, scale: 8,
-      fillColor: '#e65100', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2
-    }
-  });
-}
-
-document.getElementById('cancelPinBtn').addEventListener('click', closePinPanel);
-function closePinPanel() {
-  document.getElementById('pinPanel').style.display = 'none';
-  document.getElementById('pinNotes').value = '';
-  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
-}
-
-document.getElementById('savePinBtn').addEventListener('click', () => {
-  const panel = document.getElementById('pinPanel');
-  const childSel = document.getElementById('pinChildSelect');
-  const childId = childSel.value;
-  const childName = childId ? (childSel.options[childSel.selectedIndex].textContent.split(' - ').slice(1).join(' - ')) : '';
-  const notes = document.getElementById('pinNotes').value.trim();
-  if (!childId) { alert('Please select a Child from the list.'); return; }
-
-  showLoading(true);
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      action: 'addLocation',
-      idToken: idToken,
-      childId: childId,
-      lat: panel.dataset.lat,
-      lng: panel.dataset.lng,
-      notes: notes
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    showLoading(false);
-    if (!data.ok) { alert(data.error || 'Could not save.'); return; }
-    addMarkerForLocation({
-      childId, childName, lat: panel.dataset.lat, lng: panel.dataset.lng,
-      pinnedBy: currentUser.email, notes
-    });
-    if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
-    closePinPanel();
-    pinMode = false;
-    document.getElementById('pinModeHint').style.display = 'none';
-    document.getElementById('villageSelectedHint').style.display = 'none';
-    document.getElementById('locationSearchPanel').style.display = 'none';
-  })
-  .catch(err => { showLoading(false); alert('Network error: ' + err.message); });
-});
 
 // ---------- Sign out ----------
 document.getElementById('signOutBtn').addEventListener('click', () => {
