@@ -600,7 +600,7 @@ function goToSearchedVillage() {
   map.setZoom(16);
   selectedVillageForPin = { district: center.district, commune: center.commune, village: center.village };
   pinMode = true;
-  showGeocodeStatus('📍 Now tap the map to place the pin at the RC\\'s home in ' + center.village, 5000);
+  showGeocodeStatus('📍 Now tap the map to place the pin at the RC home in ' + center.village, 5000);
 }
 
 document.getElementById('togglePinModeBtn').addEventListener('click', () => {
