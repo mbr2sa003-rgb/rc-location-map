@@ -337,6 +337,8 @@ document.getElementById('pinDistrict').addEventListener('change', function() {
   communeSel.innerHTML = '<option value="">-- Select Commune --</option>' +
     communes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
   communeSel.disabled = false;
+
+  panMapToPlace(district + ', Cambodia', 11);
 });
 
 document.getElementById('pinCommune').addEventListener('change', function() {
@@ -357,6 +359,8 @@ document.getElementById('pinCommune').addEventListener('change', function() {
   villageSel.innerHTML = '<option value="">-- Select Village --</option>' +
     villages.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   villageSel.disabled = false;
+
+  panMapToPlace(commune + ', ' + district + ', Cambodia', 13);
 });
 
 document.getElementById('pinVillage').addEventListener('change', function() {
@@ -374,7 +378,23 @@ document.getElementById('pinVillage').addEventListener('change', function() {
   childSel.innerHTML = '<option value="">-- Select Child --</option>' +
     children.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
   childSel.disabled = false;
+
+  panMapToPlace(village + ', ' + commune + ', ' + district + ', Cambodia', 15);
 });
+
+let geocoder = null;
+function panMapToPlace(address, zoomLevel) {
+  if (!map || !window.google || !google.maps) return;
+  if (!geocoder) geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ address: address, region: 'kh' }, (results, status) => {
+    if (status === 'OK' && results[0]) {
+      map.panTo(results[0].geometry.location);
+      map.setZoom(zoomLevel);
+    }
+    // If geocoding fails (e.g. name not recognized), silently do nothing -
+    // the CVC can still find the spot manually and pin mode still works.
+  });
+}
 
 function openPinPanel(lat, lng) {
   document.getElementById('pinPanel').style.display = 'block';
