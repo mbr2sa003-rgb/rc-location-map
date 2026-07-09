@@ -158,6 +158,19 @@
     text-decoration: none;
     font-size: 13px;
   }
+  .infoWindowContent .deletePinBtn {
+    display: block;
+    margin-top: 8px;
+    background: #b3261e;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    width: 100%;
+  }
+  .infoWindowContent .deletePinBtn:hover { background: #8f1e18; }
   #loadingOverlay {
     position: fixed; inset: 0;
     background: rgba(255,255,255,0.85);
@@ -324,11 +337,34 @@ function addMarkerForLocation(loc) {
         <a class="dirBtn" target="_blank"
            href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}">
            Get Directions</a>
+        <button class="deletePinBtn" onclick="deleteLocationHandler('${escapeHtml(String(loc.childId)).replace(/'/g, "\\'")}', '${loc.lat}', '${loc.lng}')">🗑 Delete this pin</button>
       </div>`
   });
   marker.addListener('click', () => info.open(map, marker));
   markers.push(marker);
   markersByChildId[String(loc.childId).trim()] = { marker, info };
+}
+
+function deleteLocationHandler(childId, lat, lng) {
+  if (!confirm('Delete the pinned location for Child ID ' + childId + '? This cannot be undone.')) return;
+  showLoading(true);
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'deleteLocation', idToken: idToken, childId: childId, lat: lat, lng: lng })
+  })
+  .then(r => r.json())
+  .then(data => {
+    showLoading(false);
+    if (!data.ok) { alert(data.error || 'Could not delete.'); return; }
+    const entry = markersByChildId[String(childId).trim()];
+    if (entry) {
+      entry.info.close();
+      entry.marker.setMap(null);
+      delete markersByChildId[String(childId).trim()];
+    }
+  })
+  .catch(err => { showLoading(false); alert('Network error: ' + err.message); });
 }
 
 function escapeHtml(str) {
