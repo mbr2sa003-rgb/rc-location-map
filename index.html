@@ -106,7 +106,49 @@
   }
   #map { flex: 1; width: 100%; }
 
-  /* Single unified pin panel - collapsed to a slim strip, expandable */
+  /* Small District-select panel (Phase A) */
+  #districtPanel {
+    display: none;
+    position: fixed;
+    top: 52px; right: 10px;
+    width: 280px;
+    max-width: calc(100vw - 20px);
+    background: white;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    border-radius: 10px;
+    z-index: 25;
+    padding: 14px;
+  }
+  #districtPanel label { display: block; font-size: 12px; color: #444; margin-bottom: 4px; }
+  #districtPanel select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  #districtPanel .hint {
+    margin-top: 10px;
+    background: #fff3cd;
+    color: #664d03;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    display: none;
+  }
+  #districtPanel .rowBtns { margin-top: 12px; }
+  #districtPanel .rowBtns button {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    background: #eee;
+    color: #333;
+  }
+
+  /* Details panel shown after tapping the map (Phase B) */
   #pinPanel {
     display: none;
     position: fixed;
@@ -150,6 +192,14 @@
     font-size: 13px;
     margin-top: 3px;
   }
+  #pinPanel .readonlyField {
+    padding: 7px;
+    background: #f4f6f5;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 3px;
+    color: #333;
+  }
   #pinPanel .rowBtns { display: flex; gap: 8px; margin-top: 14px; }
   #pinPanel .rowBtns button {
     flex: 1;
@@ -161,15 +211,6 @@
   }
   #savePinBtn { background: #1b5e20; color: white; }
   #cancelPinBtn { background: #eee; color: #333; }
-  #tapMapHint, #locationSetHint {
-    display: none;
-    margin-top: 10px;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 12px;
-  }
-  #tapMapHint { background: #fff3cd; color: #664d03; }
-  #locationSetHint { background: #e8f5e9; color: #1b5e20; }
   .infoWindowContent { font-size: 14px; }
   .infoWindowContent .dirBtn {
     display: inline-block;
@@ -230,26 +271,31 @@
   <div id="map"></div>
 </div>
 
-<!-- SINGLE PIN PANEL: District -> Commune -> Village -> tap map -> Child -> Notes -> Save -->
+<!-- PHASE A: pick District only, then tap the map -->
+<div id="districtPanel">
+  <label>District / ស្រុក</label>
+  <select id="pinDistrict"><option value="">-- Select District --</option></select>
+  <div class="hint" id="tapMapHint">📍 Map moved to this district. Tap the map to place the pin at the RC's home.</div>
+  <div class="rowBtns"><button id="cancelDistrictBtn">Cancel</button></div>
+</div>
+
+<!-- PHASE B: shown after tapping the map - complete Commune, Village, Child -->
 <div id="pinPanel">
   <div class="panelHeader">
-    <strong>Pin New RC / បញ្ចូលទីតាំងថ្មី</strong>
+    <strong>Complete RC Details / បំពេញព័ត៌មាន</strong>
     <button id="closePinPanelBtn">✕</button>
   </div>
   <div class="panelBody">
     <label>District / ស្រុក</label>
-    <select id="pinDistrict"><option value="">-- Select District --</option></select>
+    <div class="readonlyField" id="selectedDistrictDisplay"></div>
 
     <label>Commune / ឃុំ</label>
-    <select id="pinCommune" disabled><option value="">-- Select District first --</option></select>
+    <select id="pinCommune"><option value="">-- Select Commune --</option></select>
 
     <label>Village / ភូមិ</label>
     <select id="pinVillage" disabled><option value="">-- Select Commune first --</option></select>
 
-    <div id="tapMapHint">📍 Tap on the map to set the exact location</div>
-    <div id="locationSetHint">✅ Location set — tap the map again to move it</div>
-
-    <label>Child / កុមារ</label>
+    <label>Child ID & Name / លេខសម្គាល់ និងឈ្មោះកុមារ</label>
     <select id="pinChildSelect" disabled><option value="">-- Select Village first --</option></select>
 
     <label>Notes (optional) / កំណត់ចំណាំ</label>
@@ -270,6 +316,7 @@ let markers = [];
 let markersByChildId = {}; // childId -> { marker, info }
 let roster = []; // { childId, name, district, commune, village }
 let childrenInSelectedVillage = [];
+let pendingDistrict = '';
 
 // ---------- Google Sign-In ----------
 window.onload = function() {
@@ -346,7 +393,7 @@ function initMapAndLoadMarkers(locations) {
 
     map.addListener('click', (e) => {
       if (!pinMode) return;
-      setPinLocation(e.latLng.lat(), e.latLng.lng());
+      onMapTapped(e.latLng.lat(), e.latLng.lng());
     });
   }
   setup();
@@ -403,35 +450,19 @@ function escapeHtml(str) {
   }[s]));
 }
 
-// ---------- Single unified Pin panel ----------
-document.getElementById('togglePinModeBtn').addEventListener('click', openPinPanelFresh);
-document.getElementById('closePinPanelBtn').addEventListener('click', closePinPanel);
-document.getElementById('cancelPinBtn').addEventListener('click', closePinPanel);
-
-function openPinPanelFresh() {
-  document.getElementById('pinPanel').style.display = 'block';
-  document.getElementById('pinPanel').dataset.lat = '';
-  document.getElementById('pinPanel').dataset.lng = '';
+// ---------- PHASE A: District only, then tap the map ----------
+document.getElementById('togglePinModeBtn').addEventListener('click', () => {
+  document.getElementById('districtPanel').style.display = 'block';
   document.getElementById('pinDistrict').value = '';
-  document.getElementById('pinCommune').innerHTML = '<option value="">-- Select District first --</option>';
-  document.getElementById('pinCommune').disabled = true;
-  document.getElementById('pinVillage').innerHTML = '<option value="">-- Select Commune first --</option>';
-  document.getElementById('pinVillage').disabled = true;
-  document.getElementById('pinChildSelect').innerHTML = '<option value="">-- Select Village first --</option>';
-  document.getElementById('pinChildSelect').disabled = true;
-  document.getElementById('pinNotes').value = '';
   document.getElementById('tapMapHint').style.display = 'none';
-  document.getElementById('locationSetHint').style.display = 'none';
-  childrenInSelectedVillage = [];
-  pinMode = true; // map taps are active as soon as the panel is open
-  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
-}
-
-function closePinPanel() {
-  document.getElementById('pinPanel').style.display = 'none';
+  pendingDistrict = '';
   pinMode = false;
-  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
-}
+});
+
+document.getElementById('cancelDistrictBtn').addEventListener('click', () => {
+  document.getElementById('districtPanel').style.display = 'none';
+  pinMode = false;
+});
 
 function uniqueSorted(arr) {
   return [...new Set(arr.filter(Boolean))].sort();
@@ -446,38 +477,61 @@ function populateDistrictDropdown() {
 
 document.getElementById('pinDistrict').addEventListener('change', function() {
   const district = this.value;
-  const communeSel = document.getElementById('pinCommune');
-  const villageSel = document.getElementById('pinVillage');
-  const childSel = document.getElementById('pinChildSelect');
-
-  villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
-  villageSel.disabled = true;
-  childSel.innerHTML = '<option value="">-- Select Village first --</option>';
-  childSel.disabled = true;
-  document.getElementById('tapMapHint').style.display = 'none';
-
+  pendingDistrict = district;
   if (!district) {
-    communeSel.innerHTML = '<option value="">-- Select District first --</option>';
-    communeSel.disabled = true;
+    document.getElementById('tapMapHint').style.display = 'none';
+    pinMode = false;
     return;
   }
-  const communes = uniqueSorted(roster.filter(r => r.district === district).map(r => r.commune));
-  communeSel.innerHTML = '<option value="">-- Select Commune --</option>' +
-    communes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  communeSel.disabled = false;
-
-  panMapToPlace([district], 11);
+  panMapToPlace([district], 12);
+  document.getElementById('tapMapHint').style.display = 'block';
+  pinMode = true;
 });
 
+// ---------- PHASE B: after tapping the map, complete Commune/Village/Child ----------
+function onMapTapped(lat, lng) {
+  if (!pendingDistrict) return; // safety: shouldn't happen since pinMode only true after district chosen
+
+  // close phase A, open phase B
+  document.getElementById('districtPanel').style.display = 'none';
+  const panel = document.getElementById('pinPanel');
+  panel.style.display = 'block';
+  panel.dataset.lat = lat;
+  panel.dataset.lng = lng;
+  panel.dataset.district = pendingDistrict;
+  document.getElementById('selectedDistrictDisplay').textContent = pendingDistrict;
+
+  if (tempMarker) tempMarker.setMap(null);
+  tempMarker = new google.maps.Marker({
+    position: { lat, lng }, map, icon: {
+      path: google.maps.SymbolPath.CIRCLE, scale: 8,
+      fillColor: '#e65100', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2
+    }
+  });
+
+  // Populate Commune dropdown filtered by the chosen district
+  const communes = uniqueSorted(roster.filter(r => r.district === pendingDistrict).map(r => r.commune));
+  const communeSel = document.getElementById('pinCommune');
+  communeSel.innerHTML = '<option value="">-- Select Commune --</option>' +
+    communes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+  document.getElementById('pinVillage').innerHTML = '<option value="">-- Select Commune first --</option>';
+  document.getElementById('pinVillage').disabled = true;
+  document.getElementById('pinChildSelect').innerHTML = '<option value="">-- Select Village first --</option>';
+  document.getElementById('pinChildSelect').disabled = true;
+  document.getElementById('pinNotes').value = '';
+
+  pinMode = false; // stop accepting further map taps while completing the form
+}
+
 document.getElementById('pinCommune').addEventListener('change', function() {
-  const district = document.getElementById('pinDistrict').value;
+  const district = document.getElementById('pinPanel').dataset.district;
   const commune = this.value;
   const villageSel = document.getElementById('pinVillage');
   const childSel = document.getElementById('pinChildSelect');
 
   childSel.innerHTML = '<option value="">-- Select Village first --</option>';
   childSel.disabled = true;
-  document.getElementById('tapMapHint').style.display = 'none';
 
   if (!commune) {
     villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
@@ -488,12 +542,10 @@ document.getElementById('pinCommune').addEventListener('change', function() {
   villageSel.innerHTML = '<option value="">-- Select Village --</option>' +
     villages.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   villageSel.disabled = false;
-
-  panMapToPlace([commune + ', ' + district, district], 13);
 });
 
 document.getElementById('pinVillage').addEventListener('change', function() {
-  const district = document.getElementById('pinDistrict').value;
+  const district = document.getElementById('pinPanel').dataset.district;
   const commune = document.getElementById('pinCommune').value;
   const village = this.value;
   const childSel = document.getElementById('pinChildSelect');
@@ -501,7 +553,6 @@ document.getElementById('pinVillage').addEventListener('change', function() {
   if (!village) {
     childSel.innerHTML = '<option value="">-- Select Village first --</option>';
     childSel.disabled = true;
-    document.getElementById('tapMapHint').style.display = 'none';
     return;
   }
   childrenInSelectedVillage = roster.filter(r => r.district === district && r.commune === commune && r.village === village);
@@ -510,26 +561,15 @@ document.getElementById('pinVillage').addEventListener('change', function() {
       : '<option value="">-- No children found for this village --</option>') +
     childrenInSelectedVillage.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
   childSel.disabled = false;
-
-  panMapToPlace([village + ', ' + commune + ', ' + district, commune + ', ' + district, district], 15);
-
-  document.getElementById('tapMapHint').style.display = 'block';
-  document.getElementById('locationSetHint').style.display = 'none';
 });
 
-function setPinLocation(lat, lng) {
-  const panel = document.getElementById('pinPanel');
-  panel.dataset.lat = lat;
-  panel.dataset.lng = lng;
-  if (tempMarker) tempMarker.setMap(null);
-  tempMarker = new google.maps.Marker({
-    position: { lat, lng }, map, icon: {
-      path: google.maps.SymbolPath.CIRCLE, scale: 8,
-      fillColor: '#e65100', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2
-    }
-  });
-  document.getElementById('tapMapHint').style.display = 'none';
-  document.getElementById('locationSetHint').style.display = 'block';
+document.getElementById('closePinPanelBtn').addEventListener('click', closePinPanel);
+document.getElementById('cancelPinBtn').addEventListener('click', closePinPanel);
+function closePinPanel() {
+  document.getElementById('pinPanel').style.display = 'none';
+  pinMode = false;
+  pendingDistrict = '';
+  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
 }
 
 document.getElementById('savePinBtn').addEventListener('click', () => {
@@ -538,8 +578,6 @@ document.getElementById('savePinBtn').addEventListener('click', () => {
   const childId = childSel.value;
   const childName = childId ? (childSel.options[childSel.selectedIndex].textContent.split(' - ').slice(1).join(' - ')) : '';
   const notes = document.getElementById('pinNotes').value.trim();
-
-  if (!panel.dataset.lat || !panel.dataset.lng) { alert('Please tap the map to set the location first.'); return; }
   if (!childId) { alert('Please select a Child from the list.'); return; }
 
   showLoading(true);
@@ -598,6 +636,7 @@ function showGeocodeStatus(msg, autoHideMs) {
 }
 
 // Uses OpenStreetMap's free Nominatim geocoding service - no API key or billing needed.
+// District-only lookups (this is the level that reliably geocodes for Cambodia).
 let lastGeocodeRequestAt = 0;
 
 function panMapToPlace(addressParts, zoomLevel) {
