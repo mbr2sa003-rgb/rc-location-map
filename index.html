@@ -136,6 +136,46 @@
   }
   #savePinBtn { background: #1b5e20; color: white; }
   #cancelPinBtn { background: #eee; color: #333; }
+  #locationSearchPanel {
+    display: none;
+    position: fixed;
+    top: 60px; left: 0; right: 0;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    padding: 16px;
+    z-index: 20;
+    max-width: 420px;
+    margin: 0 auto;
+    border-radius: 0 0 10px 10px;
+  }
+  #locationSearchPanel label { display: block; margin-top: 10px; font-size: 13px; color: #444; }
+  #locationSearchPanel select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  #locationSearchPanel .rowBtns { display: flex; gap: 10px; margin-top: 14px; }
+  #locationSearchPanel .rowBtns button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    background: #eee;
+    color: #333;
+  }
+  #villageSelectedHint {
+    margin-top: 12px;
+    background: #e8f5e9;
+    color: #1b5e20;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
   #pinModeHint {
     display: none;
     position: fixed;
@@ -208,9 +248,9 @@
   <div id="map"></div>
 </div>
 
-<!-- PIN DETAILS PANEL (shown after tapping map in pin mode) -->
-<div id="pinPanel">
-  <strong>New RC Location / ទីតាំងថ្មី</strong>
+<!-- STEP 1: Location search panel (shown first, before tapping the map) -->
+<div id="locationSearchPanel">
+  <strong>Step 1: Find the area / ជំហានទី១៖ ស្វែងរកតំបន់</strong>
 
   <label>District / ស្រុក</label>
   <select id="pinDistrict"><option value="">-- Select District --</option></select>
@@ -221,8 +261,21 @@
   <label>Village / ភូមិ</label>
   <select id="pinVillage" disabled><option value="">-- Select Commune first --</option></select>
 
+  <div id="villageSelectedHint" style="display:none;">
+    ✅ Map is now zoomed to this village. Tap on the map to place the pin at the RC's home.
+  </div>
+
+  <div class="rowBtns">
+    <button id="closeLocationSearchBtn">Close</button>
+  </div>
+</div>
+
+<!-- PIN DETAILS PANEL (shown after tapping map in pin mode) -->
+<div id="pinPanel">
+  <strong>Step 2: Confirm the child / ជំហានទី២៖ បញ្ជាក់កុមារ</strong>
+
   <label>Child / កុមារ</label>
-  <select id="pinChildSelect" disabled><option value="">-- Select Village first --</option></select>
+  <select id="pinChildSelect"><option value="">-- No children found for this village --</option></select>
 
   <label>Notes (optional) / កំណត់ចំណាំ</label>
   <textarea id="pinNotes" rows="2" placeholder="e.g. house behind the pagoda"></textarea>
@@ -239,6 +292,7 @@ let map, currentUser, idToken, tempMarker, pinMode = false;
 let markers = [];
 let markersByChildId = {}; // childId -> { marker, info }
 let roster = []; // { childId, name, district, commune, village }
+let childrenInSelectedVillage = [];
 
 // ---------- Google Sign-In ----------
 window.onload = function() {
@@ -373,10 +427,15 @@ function escapeHtml(str) {
   }[s]));
 }
 
-// ---------- Pin new location ----------
+// ---------- Pin new location: Step 1 = pick area, Step 2 = tap map + pick child ----------
 document.getElementById('togglePinModeBtn').addEventListener('click', () => {
-  pinMode = !pinMode;
-  document.getElementById('pinModeHint').style.display = pinMode ? 'block' : 'none';
+  document.getElementById('locationSearchPanel').style.display = 'block';
+});
+
+document.getElementById('closeLocationSearchBtn').addEventListener('click', () => {
+  document.getElementById('locationSearchPanel').style.display = 'none';
+  document.getElementById('pinModeHint').style.display = 'none';
+  pinMode = false;
 });
 
 function uniqueSorted(arr) {
@@ -394,12 +453,13 @@ document.getElementById('pinDistrict').addEventListener('change', function() {
   const district = this.value;
   const communeSel = document.getElementById('pinCommune');
   const villageSel = document.getElementById('pinVillage');
-  const childSel = document.getElementById('pinChildSelect');
 
   villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
   villageSel.disabled = true;
-  childSel.innerHTML = '<option value="">-- Select Village first --</option>';
-  childSel.disabled = true;
+  childrenInSelectedVillage = [];
+  document.getElementById('villageSelectedHint').style.display = 'none';
+  document.getElementById('pinModeHint').style.display = 'none';
+  pinMode = false;
 
   if (!district) {
     communeSel.innerHTML = '<option value="">-- Select District first --</option>';
@@ -418,10 +478,11 @@ document.getElementById('pinCommune').addEventListener('change', function() {
   const district = document.getElementById('pinDistrict').value;
   const commune = this.value;
   const villageSel = document.getElementById('pinVillage');
-  const childSel = document.getElementById('pinChildSelect');
 
-  childSel.innerHTML = '<option value="">-- Select Village first --</option>';
-  childSel.disabled = true;
+  childrenInSelectedVillage = [];
+  document.getElementById('villageSelectedHint').style.display = 'none';
+  document.getElementById('pinModeHint').style.display = 'none';
+  pinMode = false;
 
   if (!commune) {
     villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
@@ -440,19 +501,22 @@ document.getElementById('pinVillage').addEventListener('change', function() {
   const district = document.getElementById('pinDistrict').value;
   const commune = document.getElementById('pinCommune').value;
   const village = this.value;
-  const childSel = document.getElementById('pinChildSelect');
 
   if (!village) {
-    childSel.innerHTML = '<option value="">-- Select Village first --</option>';
-    childSel.disabled = true;
+    childrenInSelectedVillage = [];
+    document.getElementById('villageSelectedHint').style.display = 'none';
+    document.getElementById('pinModeHint').style.display = 'none';
+    pinMode = false;
     return;
   }
-  const children = roster.filter(r => r.district === district && r.commune === commune && r.village === village);
-  childSel.innerHTML = '<option value="">-- Select Child --</option>' +
-    children.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
-  childSel.disabled = false;
+  childrenInSelectedVillage = roster.filter(r => r.district === district && r.commune === commune && r.village === village);
 
   panMapToPlace([village + ', ' + commune + ', ' + district, commune + ', ' + district, district], 15);
+
+  // Now ready to tap the map to place the pin
+  pinMode = true;
+  document.getElementById('villageSelectedHint').style.display = 'block';
+  document.getElementById('pinModeHint').style.display = 'block';
 });
 
 // ---------- Search for a pinned RC by Child ID ----------
@@ -473,7 +537,6 @@ function doSearch() {
   entry.info.open(map, entry.marker);
 }
 
-let geocoder = null;
 function showGeocodeStatus(msg, autoHideMs) {
   const box = document.getElementById('geocodeStatus');
   box.textContent = msg;
@@ -484,35 +547,62 @@ function showGeocodeStatus(msg, autoHideMs) {
   }
 }
 
+// Uses OpenStreetMap's free Nominatim geocoding service - no API key or billing needed.
 // Tries progressively shorter addresses if the full one isn't found -
 // e.g. "Village, Commune, District, Cambodia" -> "Commune, District, Cambodia" -> "District, Cambodia"
+let lastGeocodeRequestAt = 0;
+
 function panMapToPlace(addressParts, zoomLevel) {
-  if (!map || !window.google || !google.maps) return;
-  if (!geocoder) geocoder = new google.maps.Geocoder();
+  if (!map) return;
   showGeocodeStatus('Searching map for that location...');
-  tryGeocode(addressParts, 0, zoomLevel);
+  tryGeocodeOSM(addressParts, 0, zoomLevel);
 }
 
-function tryGeocode(addressParts, index, zoomLevel) {
+function tryGeocodeOSM(addressParts, index, zoomLevel) {
   if (index >= addressParts.length) {
     showGeocodeStatus('Could not find that area on the map automatically. Please pan/zoom manually.', 4000);
     return;
   }
-  const address = addressParts.slice(index).join(', ') + ', Cambodia';
-  geocoder.geocode({ address: address, region: 'kh' }, (results, status) => {
-    if (status === 'OK' && results[0]) {
-      map.panTo(results[0].geometry.location);
-      map.setZoom(index === 0 ? zoomLevel : Math.max(zoomLevel - (index * 2), 10));
-      showGeocodeStatus('Found: ' + results[0].formatted_address, 3000);
-    } else if (index + 1 < addressParts.length) {
-      tryGeocode(addressParts, index + 1, zoomLevel); // fall back to a broader search
-    } else {
-      showGeocodeStatus('Could not find that area on the map automatically (status: ' + status + '). Please pan/zoom manually.', 5000);
-    }
-  });
+  const query = addressParts.slice(index).join(', ') + ', Cambodia';
+  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kh&q=' + encodeURIComponent(query);
+
+  // Nominatim's fair-use policy asks for roughly 1 request/second max - this small
+  // delay keeps us well within that even if dropdowns are changed quickly.
+  const now = Date.now();
+  const wait = Math.max(0, 1100 - (now - lastGeocodeRequestAt));
+  lastGeocodeRequestAt = now + wait;
+
+  setTimeout(() => {
+    fetch(url)
+      .then(r => r.json())
+      .then(results => {
+        if (results && results.length > 0) {
+          const lat = parseFloat(results[0].lat);
+          const lng = parseFloat(results[0].lon);
+          map.panTo({ lat, lng });
+          map.setZoom(index === 0 ? zoomLevel : Math.max(zoomLevel - (index * 2), 10));
+          showGeocodeStatus('Found: ' + results[0].display_name, 3000);
+        } else if (index + 1 < addressParts.length) {
+          tryGeocodeOSM(addressParts, index + 1, zoomLevel); // fall back to a broader search
+        } else {
+          showGeocodeStatus('Could not find that area on the map automatically. Please pan/zoom manually.', 5000);
+        }
+      })
+      .catch(() => {
+        showGeocodeStatus('Location search failed (network error). Please pan/zoom manually.', 5000);
+      });
+  }, wait);
 }
 
 function openPinPanel(lat, lng) {
+  const childSel = document.getElementById('pinChildSelect');
+  if (childrenInSelectedVillage.length) {
+    childSel.innerHTML = '<option value="">-- Select Child --</option>' +
+      childrenInSelectedVillage.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
+  } else {
+    childSel.innerHTML = '<option value="">-- No children found for this village, check roster --</option>';
+  }
+
   document.getElementById('pinPanel').style.display = 'block';
   document.getElementById('pinPanel').dataset.lat = lat;
   document.getElementById('pinPanel').dataset.lng = lng;
@@ -528,13 +618,6 @@ function openPinPanel(lat, lng) {
 document.getElementById('cancelPinBtn').addEventListener('click', closePinPanel);
 function closePinPanel() {
   document.getElementById('pinPanel').style.display = 'none';
-  document.getElementById('pinDistrict').value = '';
-  document.getElementById('pinCommune').innerHTML = '<option value="">-- Select District first --</option>';
-  document.getElementById('pinCommune').disabled = true;
-  document.getElementById('pinVillage').innerHTML = '<option value="">-- Select Commune first --</option>';
-  document.getElementById('pinVillage').disabled = true;
-  document.getElementById('pinChildSelect').innerHTML = '<option value="">-- Select Village first --</option>';
-  document.getElementById('pinChildSelect').disabled = true;
   document.getElementById('pinNotes').value = '';
   if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
 }
@@ -572,6 +655,8 @@ document.getElementById('savePinBtn').addEventListener('click', () => {
     closePinPanel();
     pinMode = false;
     document.getElementById('pinModeHint').style.display = 'none';
+    document.getElementById('villageSelectedHint').style.display = 'none';
+    document.getElementById('locationSearchPanel').style.display = 'none';
   })
   .catch(err => { showLoading(false); alert('Network error: ' + err.message); });
 });
