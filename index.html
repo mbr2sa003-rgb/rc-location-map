@@ -63,15 +63,17 @@
     background: #2e7d32;
     color: white;
     border: none;
-    padding: 8px 14px;
+    padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
   }
   #topBar button:hover { background: #256428; }
   #topBar button.secondary { background: #6d6d6d; }
   #topBar button.secondary:hover { background: #555; }
-  #searchBox { display: flex; gap: 6px; flex: 1; min-width: 180px; max-width: 300px; }
+  #topBar button.adminBtn { background: #8e24aa; }
+  #topBar button.adminBtn:hover { background: #6a1b7a; }
+  #searchBox { display: flex; gap: 6px; flex: 1; min-width: 200px; max-width: 340px; position: relative; }
   #searchBox input {
     flex: 1;
     padding: 7px 10px;
@@ -91,6 +93,7 @@
     white-space: nowrap;
   }
   #searchBox button:hover { background: #f0ca67; }
+  #topBtnGroup { display: flex; gap: 6px; flex-wrap: wrap; }
   #geocodeStatus {
     display: none;
     position: fixed;
@@ -106,50 +109,8 @@
   }
   #map { flex: 1; width: 100%; }
 
-  /* Small District-select panel (Phase A) */
-  #districtPanel {
-    display: none;
-    position: fixed;
-    top: 52px; right: 10px;
-    width: 280px;
-    max-width: calc(100vw - 20px);
-    background: white;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
-    border-radius: 10px;
-    z-index: 25;
-    padding: 14px;
-  }
-  #districtPanel label { display: block; font-size: 12px; color: #444; margin-bottom: 4px; }
-  #districtPanel select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 14px;
-  }
-  #districtPanel .hint {
-    margin-top: 10px;
-    background: #fff3cd;
-    color: #664d03;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    display: none;
-  }
-  #districtPanel .rowBtns { margin-top: 12px; }
-  #districtPanel .rowBtns button {
-    width: 100%;
-    padding: 8px;
-    border-radius: 6px;
-    border: none;
-    font-size: 13px;
-    cursor: pointer;
-    background: #eee;
-    color: #333;
-  }
-
-  /* Details panel shown after tapping the map (Phase B) */
-  #pinPanel {
+  /* Shared floating panel style */
+  .floatPanel {
     display: none;
     position: fixed;
     top: 52px; right: 10px;
@@ -162,18 +123,19 @@
     max-height: 78vh;
     overflow-y: auto;
   }
-  #pinPanel .panelHeader {
+  .floatPanel .panelHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px 14px;
-    background: #1b5e20;
     color: white;
     border-radius: 10px 10px 0 0;
     position: sticky;
     top: 0;
   }
-  #pinPanel .panelHeader button {
+  #villageCenterPanel .panelHeader { background: #8e24aa; }
+  #pinPanel .panelHeader { background: #1b5e20; }
+  .floatPanel .panelHeader button {
     background: none;
     border: none;
     color: white;
@@ -182,9 +144,9 @@
     line-height: 1;
     padding: 0 4px;
   }
-  #pinPanel .panelBody { padding: 12px 14px 16px; }
-  #pinPanel label { display: block; margin-top: 10px; font-size: 12px; color: #444; }
-  #pinPanel input, #pinPanel textarea, #pinPanel select {
+  .floatPanel .panelBody { padding: 12px 14px 16px; }
+  .floatPanel label { display: block; margin-top: 10px; font-size: 12px; color: #444; }
+  .floatPanel input, .floatPanel textarea, .floatPanel select {
     width: 100%;
     padding: 7px;
     border: 1px solid #ccc;
@@ -192,7 +154,7 @@
     font-size: 13px;
     margin-top: 3px;
   }
-  #pinPanel .readonlyField {
+  .floatPanel .readonlyField {
     padding: 7px;
     background: #f4f6f5;
     border-radius: 6px;
@@ -200,8 +162,17 @@
     margin-top: 3px;
     color: #333;
   }
-  #pinPanel .rowBtns { display: flex; gap: 8px; margin-top: 14px; }
-  #pinPanel .rowBtns button {
+  .floatPanel .hint {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    display: none;
+  }
+  .floatPanel .hint.warn { background: #fff3cd; color: #664d03; }
+  .floatPanel .hint.ok { background: #e8f5e9; color: #1b5e20; }
+  .floatPanel .rowBtns { display: flex; gap: 8px; margin-top: 14px; }
+  .floatPanel .rowBtns button {
     flex: 1;
     padding: 9px;
     border-radius: 6px;
@@ -209,8 +180,9 @@
     font-size: 13px;
     cursor: pointer;
   }
-  #savePinBtn { background: #1b5e20; color: white; }
-  #cancelPinBtn { background: #eee; color: #333; }
+  .btnPrimary { background: #1b5e20; color: white; }
+  .btnPrimaryPurple { background: #8e24aa; color: white; }
+  .btnCancel { background: #eee; color: #333; }
   .infoWindowContent { font-size: 14px; }
   .infoWindowContent .dirBtn {
     display: inline-block;
@@ -259,11 +231,14 @@
   <div id="topBar">
     <div class="userInfo" id="userInfo"></div>
     <div id="searchBox">
-      <input type="text" id="searchChildId" placeholder="Find RC by Child ID">
-      <button id="searchBtn">🔍 Find</button>
+      <input type="text" id="villageSearchInput" list="villageDatalist" placeholder="Search village name... / ស្វែងរកភូមិ">
+      <datalist id="villageDatalist"></datalist>
+      <button id="goToVillageBtn">📍 Go</button>
     </div>
-    <div>
-      <button id="togglePinModeBtn">➕ Pin New RC</button>
+    <div id="topBtnGroup">
+      <button id="togglePinModeBtn">➕ Pin RC</button>
+      <button id="findChildBtn">🔍 Find RC</button>
+      <button class="adminBtn" id="toggleVillageCenterBtn" style="display:none;">📌 Set Village Center</button>
       <button class="secondary" id="signOutBtn">Sign out</button>
     </div>
   </div>
@@ -271,39 +246,51 @@
   <div id="map"></div>
 </div>
 
-<!-- PHASE A: pick District only, then tap the map -->
-<div id="districtPanel">
-  <label>District / ស្រុក</label>
-  <select id="pinDistrict"><option value="">-- Select District --</option></select>
-  <div class="hint" id="tapMapHint">📍 Map moved to this district. Tap the map to place the pin at the RC's home.</div>
-  <div class="rowBtns"><button id="cancelDistrictBtn">Cancel</button></div>
+<!-- ADMIN ONLY: pick District/Commune/Village, tap map to save its center point -->
+<div id="villageCenterPanel" class="floatPanel">
+  <div class="panelHeader">
+    <strong>Set Village Center / កំណត់ចំណុចកណ្តាលភូមិ</strong>
+    <button id="closeVillageCenterBtn">✕</button>
+  </div>
+  <div class="panelBody">
+    <label>District / ស្រុក</label>
+    <select id="vcDistrict"><option value="">-- Select District --</option></select>
+
+    <label>Commune / ឃុំ</label>
+    <select id="vcCommune" disabled><option value="">-- Select District first --</option></select>
+
+    <label>Village / ភូមិ</label>
+    <select id="vcVillage" disabled><option value="">-- Select Commune first --</option></select>
+
+    <div class="hint warn" id="vcTapHint">📍 Tap the map at this village's central point (e.g. the school, pagoda, or market).</div>
+    <div class="hint ok" id="vcSetHint">✅ Center point set. Tap again to adjust, or Save.</div>
+
+    <div class="rowBtns">
+      <button class="btnCancel" id="vcCancelBtn">Cancel</button>
+      <button class="btnPrimaryPurple" id="vcSaveBtn">Save Center</button>
+    </div>
+  </div>
 </div>
 
-<!-- PHASE B: shown after tapping the map - complete Commune, Village, Child -->
-<div id="pinPanel">
+<!-- Household pin details, shown after tapping the map near a searched village -->
+<div id="pinPanel" class="floatPanel">
   <div class="panelHeader">
     <strong>Complete RC Details / បំពេញព័ត៌មាន</strong>
     <button id="closePinPanelBtn">✕</button>
   </div>
   <div class="panelBody">
-    <label>District / ស្រុក</label>
-    <div class="readonlyField" id="selectedDistrictDisplay"></div>
-
-    <label>Commune / ឃុំ</label>
-    <select id="pinCommune"><option value="">-- Select Commune --</option></select>
-
     <label>Village / ភូមិ</label>
-    <select id="pinVillage" disabled><option value="">-- Select Commune first --</option></select>
+    <div class="readonlyField" id="pinVillageDisplay"></div>
 
     <label>Child ID & Name / លេខសម្គាល់ និងឈ្មោះកុមារ</label>
-    <select id="pinChildSelect" disabled><option value="">-- Select Village first --</option></select>
+    <select id="pinChildSelect"><option value="">-- Select Child --</option></select>
 
     <label>Notes (optional) / កំណត់ចំណាំ</label>
     <textarea id="pinNotes" rows="2" placeholder="e.g. house behind the pagoda"></textarea>
 
     <div class="rowBtns">
-      <button id="cancelPinBtn">Cancel</button>
-      <button id="savePinBtn">Save Pin</button>
+      <button class="btnCancel" id="cancelPinBtn">Cancel</button>
+      <button class="btnPrimary" id="savePinBtn">Save Pin</button>
     </div>
   </div>
 </div>
@@ -311,12 +298,14 @@
 <div id="loadingOverlay" style="display:none;">Loading...</div>
 
 <script>
-let map, currentUser, idToken, tempMarker, pinMode = false;
+let map, currentUser, idToken, tempMarker, pinMode = false, villageCenterMode = false;
 let markers = [];
-let markersByChildId = {}; // childId -> { marker, info }
+let markersByChildId = {};
 let roster = []; // { childId, name, district, commune, village }
-let childrenInSelectedVillage = [];
-let pendingDistrict = '';
+let villageCenters = []; // { district, commune, village, lat, lng }
+let villageCentersByKey = {}; // "district|commune|village" -> center
+let villageDisplayToKey = {}; // "Village - Commune - District" -> "district|commune|village"
+let selectedVillageForPin = null; // { district, commune, village }
 
 // ---------- Google Sign-In ----------
 window.onload = function() {
@@ -347,11 +336,19 @@ function handleCredentialResponse(response) {
     }
     currentUser = data.user;
     roster = data.roster || [];
+    villageCenters = data.villageCenters || [];
+    buildVillageLookups();
+
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appScreen').style.display = 'flex';
     document.getElementById('userInfo').textContent =
       currentUser.name + ' (' + currentUser.role + ')';
-    populateDistrictDropdown();
+
+    if (String(currentUser.role).toLowerCase() === 'admin') {
+      document.getElementById('toggleVillageCenterBtn').style.display = 'inline-block';
+      populateVCDistrictDropdown();
+    }
+
     initMapAndLoadMarkers(data.locations);
   })
   .catch(err => {
@@ -367,6 +364,30 @@ function showError(msg) {
 }
 function showLoading(on) {
   document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
+}
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, s => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[s]));
+}
+function uniqueSorted(arr) {
+  return [...new Set(arr.filter(Boolean))].sort();
+}
+function vKey(d, c, v) { return d + '|' + c + '|' + v; }
+
+function buildVillageLookups() {
+  villageCentersByKey = {};
+  villageDisplayToKey = {};
+  const datalist = document.getElementById('villageDatalist');
+  let options = '';
+  villageCenters.forEach(vc => {
+    const key = vKey(vc.district, vc.commune, vc.village);
+    villageCentersByKey[key] = vc;
+    const display = vc.village + ' - ' + vc.commune + ' - ' + vc.district;
+    villageDisplayToKey[display] = key;
+    options += `<option value="${escapeHtml(display)}">`;
+  });
+  datalist.innerHTML = options;
 }
 
 // ---------- Google Maps ----------
@@ -392,8 +413,8 @@ function initMapAndLoadMarkers(locations) {
     locations.forEach(addMarkerForLocation);
 
     map.addListener('click', (e) => {
-      if (!pinMode) return;
-      onMapTapped(e.latLng.lat(), e.latLng.lng());
+      if (villageCenterMode) { onVillageCenterMapTapped(e.latLng.lat(), e.latLng.lng()); return; }
+      if (pinMode) { onHouseholdMapTapped(e.latLng.lat(), e.latLng.lng()); return; }
     });
   }
   setup();
@@ -444,62 +465,161 @@ function deleteLocationHandler(childId, lat, lng) {
   .catch(err => { showLoading(false); alert('Network error: ' + err.message); });
 }
 
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, s => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[s]));
+/* =========================================================================
+   ADMIN MODE: Set Village Center
+   ========================================================================= */
+document.getElementById('toggleVillageCenterBtn').addEventListener('click', () => {
+  document.getElementById('villageCenterPanel').style.display = 'block';
+  document.getElementById('vcDistrict').value = '';
+  document.getElementById('vcCommune').innerHTML = '<option value="">-- Select District first --</option>';
+  document.getElementById('vcCommune').disabled = true;
+  document.getElementById('vcVillage').innerHTML = '<option value="">-- Select Commune first --</option>';
+  document.getElementById('vcVillage').disabled = true;
+  document.getElementById('vcTapHint').style.display = 'none';
+  document.getElementById('vcSetHint').style.display = 'none';
+  villageCenterMode = false;
+  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
+});
+document.getElementById('closeVillageCenterBtn').addEventListener('click', closeVillageCenterPanel);
+document.getElementById('vcCancelBtn').addEventListener('click', closeVillageCenterPanel);
+function closeVillageCenterPanel() {
+  document.getElementById('villageCenterPanel').style.display = 'none';
+  villageCenterMode = false;
+  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
 }
 
-// ---------- PHASE A: District only, then tap the map ----------
-document.getElementById('togglePinModeBtn').addEventListener('click', () => {
-  document.getElementById('districtPanel').style.display = 'block';
-  document.getElementById('pinDistrict').value = '';
-  document.getElementById('tapMapHint').style.display = 'none';
-  pendingDistrict = '';
-  pinMode = false;
-});
-
-document.getElementById('cancelDistrictBtn').addEventListener('click', () => {
-  document.getElementById('districtPanel').style.display = 'none';
-  pinMode = false;
-});
-
-function uniqueSorted(arr) {
-  return [...new Set(arr.filter(Boolean))].sort();
-}
-
-function populateDistrictDropdown() {
-  const sel = document.getElementById('pinDistrict');
+function populateVCDistrictDropdown() {
+  const sel = document.getElementById('vcDistrict');
   const districts = uniqueSorted(roster.map(r => r.district));
   sel.innerHTML = '<option value="">-- Select District --</option>' +
     districts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
 }
 
-document.getElementById('pinDistrict').addEventListener('change', function() {
+document.getElementById('vcDistrict').addEventListener('change', function() {
   const district = this.value;
-  pendingDistrict = district;
-  if (!district) {
-    document.getElementById('tapMapHint').style.display = 'none';
-    pinMode = false;
-    return;
-  }
-  panMapToPlace([district], 12);
-  document.getElementById('tapMapHint').style.display = 'block';
-  pinMode = true;
+  const communeSel = document.getElementById('vcCommune');
+  const villageSel = document.getElementById('vcVillage');
+  villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
+  villageSel.disabled = true;
+  document.getElementById('vcTapHint').style.display = 'none';
+  villageCenterMode = false;
+
+  if (!district) { communeSel.innerHTML = '<option value="">-- Select District first --</option>'; communeSel.disabled = true; return; }
+  const communes = uniqueSorted(roster.filter(r => r.district === district).map(r => r.commune));
+  communeSel.innerHTML = '<option value="">-- Select Commune --</option>' +
+    communes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  communeSel.disabled = false;
 });
 
-// ---------- PHASE B: after tapping the map, complete Commune/Village/Child ----------
-function onMapTapped(lat, lng) {
-  if (!pendingDistrict) return; // safety: shouldn't happen since pinMode only true after district chosen
+document.getElementById('vcCommune').addEventListener('change', function() {
+  const district = document.getElementById('vcDistrict').value;
+  const commune = this.value;
+  const villageSel = document.getElementById('vcVillage');
+  document.getElementById('vcTapHint').style.display = 'none';
+  villageCenterMode = false;
 
-  // close phase A, open phase B
-  document.getElementById('districtPanel').style.display = 'none';
+  if (!commune) { villageSel.innerHTML = '<option value="">-- Select Commune first --</option>'; villageSel.disabled = true; return; }
+  const villages = uniqueSorted(roster.filter(r => r.district === district && r.commune === commune).map(r => r.village));
+  villageSel.innerHTML = '<option value="">-- Select Village --</option>' +
+    villages.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  villageSel.disabled = false;
+});
+
+document.getElementById('vcVillage').addEventListener('change', function() {
+  if (!this.value) { document.getElementById('vcTapHint').style.display = 'none'; villageCenterMode = false; return; }
+  document.getElementById('vcTapHint').style.display = 'block';
+  document.getElementById('vcSetHint').style.display = 'none';
+  villageCenterMode = true;
+  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
+});
+
+function onVillageCenterMapTapped(lat, lng) {
+  document.getElementById('villageCenterPanel').dataset.lat = lat;
+  document.getElementById('villageCenterPanel').dataset.lng = lng;
+  if (tempMarker) tempMarker.setMap(null);
+  tempMarker = new google.maps.Marker({
+    position: { lat, lng }, map, icon: {
+      path: google.maps.SymbolPath.CIRCLE, scale: 9,
+      fillColor: '#8e24aa', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2
+    }
+  });
+  document.getElementById('vcTapHint').style.display = 'none';
+  document.getElementById('vcSetHint').style.display = 'block';
+}
+
+document.getElementById('vcSaveBtn').addEventListener('click', () => {
+  const panel = document.getElementById('villageCenterPanel');
+  const district = document.getElementById('vcDistrict').value;
+  const commune = document.getElementById('vcCommune').value;
+  const village = document.getElementById('vcVillage').value;
+  if (!district || !commune || !village) { alert('Please select District, Commune, and Village.'); return; }
+  if (!panel.dataset.lat || !panel.dataset.lng) { alert('Please tap the map to set the center point first.'); return; }
+
+  showLoading(true);
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: 'setVillageCenter', idToken: idToken,
+      district, commune, village, lat: panel.dataset.lat, lng: panel.dataset.lng
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    showLoading(false);
+    if (!data.ok) { alert(data.error || 'Could not save.'); return; }
+    const key = vKey(district, commune, village);
+    const center = { district, commune, village, lat: panel.dataset.lat, lng: panel.dataset.lng };
+    villageCentersByKey[key] = center;
+    const existingIndex = villageCenters.findIndex(vc => vKey(vc.district, vc.commune, vc.village) === key);
+    if (existingIndex >= 0) villageCenters[existingIndex] = center; else villageCenters.push(center);
+    buildVillageLookups();
+    alert('Saved! Village center for "' + village + '" is set.');
+    closeVillageCenterPanel();
+  })
+  .catch(err => { showLoading(false); alert('Network error: ' + err.message); });
+});
+
+/* =========================================================================
+   CVC MODE: search a village -> map jumps there -> tap to pin household
+   ========================================================================= */
+document.getElementById('goToVillageBtn').addEventListener('click', goToSearchedVillage);
+document.getElementById('villageSearchInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') goToSearchedVillage();
+});
+
+function goToSearchedVillage() {
+  const typed = document.getElementById('villageSearchInput').value.trim();
+  const key = villageDisplayToKey[typed];
+  if (!key) {
+    alert('Please pick a village from the suggestions list (start typing and choose one).');
+    return;
+  }
+  const center = villageCentersByKey[key];
+  map.panTo({ lat: parseFloat(center.lat), lng: parseFloat(center.lng) });
+  map.setZoom(16);
+  selectedVillageForPin = { district: center.district, commune: center.commune, village: center.village };
+  pinMode = true;
+  showGeocodeStatus('📍 Now tap the map to place the pin at the RC\\'s home in ' + center.village, 5000);
+}
+
+document.getElementById('togglePinModeBtn').addEventListener('click', () => {
+  const typed = document.getElementById('villageSearchInput').value.trim();
+  if (villageDisplayToKey[typed]) {
+    goToSearchedVillage();
+  } else {
+    alert('First search and select a village above (or use "Set Village Center" if you are an Admin and this village has no center point yet), then tap the map.');
+  }
+});
+
+function onHouseholdMapTapped(lat, lng) {
+  if (!selectedVillageForPin) return;
   const panel = document.getElementById('pinPanel');
   panel.style.display = 'block';
   panel.dataset.lat = lat;
   panel.dataset.lng = lng;
-  panel.dataset.district = pendingDistrict;
-  document.getElementById('selectedDistrictDisplay').textContent = pendingDistrict;
+  document.getElementById('pinVillageDisplay').textContent =
+    selectedVillageForPin.village + ' - ' + selectedVillageForPin.commune + ' - ' + selectedVillageForPin.district;
 
   if (tempMarker) tempMarker.setMap(null);
   tempMarker = new google.maps.Marker({
@@ -509,66 +629,26 @@ function onMapTapped(lat, lng) {
     }
   });
 
-  // Populate Commune dropdown filtered by the chosen district
-  const communes = uniqueSorted(roster.filter(r => r.district === pendingDistrict).map(r => r.commune));
-  const communeSel = document.getElementById('pinCommune');
-  communeSel.innerHTML = '<option value="">-- Select Commune --</option>' +
-    communes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-
-  document.getElementById('pinVillage').innerHTML = '<option value="">-- Select Commune first --</option>';
-  document.getElementById('pinVillage').disabled = true;
-  document.getElementById('pinChildSelect').innerHTML = '<option value="">-- Select Village first --</option>';
-  document.getElementById('pinChildSelect').disabled = true;
-  document.getElementById('pinNotes').value = '';
-
-  pinMode = false; // stop accepting further map taps while completing the form
-}
-
-document.getElementById('pinCommune').addEventListener('change', function() {
-  const district = document.getElementById('pinPanel').dataset.district;
-  const commune = this.value;
-  const villageSel = document.getElementById('pinVillage');
+  const children = roster.filter(r =>
+    r.district === selectedVillageForPin.district &&
+    r.commune === selectedVillageForPin.commune &&
+    r.village === selectedVillageForPin.village);
   const childSel = document.getElementById('pinChildSelect');
-
-  childSel.innerHTML = '<option value="">-- Select Village first --</option>';
-  childSel.disabled = true;
-
-  if (!commune) {
-    villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
-    villageSel.disabled = true;
-    return;
-  }
-  const villages = uniqueSorted(roster.filter(r => r.district === district && r.commune === commune).map(r => r.village));
-  villageSel.innerHTML = '<option value="">-- Select Village --</option>' +
-    villages.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-  villageSel.disabled = false;
-});
-
-document.getElementById('pinVillage').addEventListener('change', function() {
-  const district = document.getElementById('pinPanel').dataset.district;
-  const commune = document.getElementById('pinCommune').value;
-  const village = this.value;
-  const childSel = document.getElementById('pinChildSelect');
-
-  if (!village) {
-    childSel.innerHTML = '<option value="">-- Select Village first --</option>';
-    childSel.disabled = true;
-    return;
-  }
-  childrenInSelectedVillage = roster.filter(r => r.district === district && r.commune === commune && r.village === village);
-  childSel.innerHTML = (childrenInSelectedVillage.length
+  childSel.innerHTML = (children.length
       ? '<option value="">-- Select Child --</option>'
       : '<option value="">-- No children found for this village --</option>') +
-    childrenInSelectedVillage.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
-  childSel.disabled = false;
-});
+    children.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
+  document.getElementById('pinNotes').value = '';
+
+  pinMode = false;
+}
 
 document.getElementById('closePinPanelBtn').addEventListener('click', closePinPanel);
 document.getElementById('cancelPinBtn').addEventListener('click', closePinPanel);
 function closePinPanel() {
   document.getElementById('pinPanel').style.display = 'none';
   pinMode = false;
-  pendingDistrict = '';
+  selectedVillageForPin = null;
   if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
 }
 
@@ -585,37 +665,26 @@ document.getElementById('savePinBtn').addEventListener('click', () => {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
-      action: 'addLocation',
-      idToken: idToken,
-      childId: childId,
-      lat: panel.dataset.lat,
-      lng: panel.dataset.lng,
-      notes: notes
+      action: 'addLocation', idToken: idToken, childId: childId,
+      lat: panel.dataset.lat, lng: panel.dataset.lng, notes: notes
     })
   })
   .then(r => r.json())
   .then(data => {
     showLoading(false);
     if (!data.ok) { alert(data.error || 'Could not save.'); return; }
-    addMarkerForLocation({
-      childId, childName, lat: panel.dataset.lat, lng: panel.dataset.lng,
-      pinnedBy: currentUser.email, notes
-    });
+    addMarkerForLocation({ childId, childName, lat: panel.dataset.lat, lng: panel.dataset.lng, pinnedBy: currentUser.email, notes });
     if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
     closePinPanel();
   })
   .catch(err => { showLoading(false); alert('Network error: ' + err.message); });
 });
 
-// ---------- Search for a pinned RC by Child ID ----------
-document.getElementById('searchBtn').addEventListener('click', doSearch);
-document.getElementById('searchChildId').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') doSearch();
-});
-function doSearch() {
-  const raw = document.getElementById('searchChildId').value.trim();
+// ---------- Search for a pinned RC by Child ID (separate from village search) ----------
+document.getElementById('findChildBtn').addEventListener('click', () => {
+  const raw = prompt('Enter Child ID to find their pinned location:');
   if (!raw) return;
-  const entry = markersByChildId[raw];
+  const entry = markersByChildId[raw.trim()];
   if (!entry) {
     alert('No pinned location found for Child ID "' + raw + '". Check the ID, or this RC has not been pinned yet.');
     return;
@@ -623,7 +692,7 @@ function doSearch() {
   map.panTo(entry.marker.getPosition());
   map.setZoom(17);
   entry.info.open(map, entry.marker);
-}
+});
 
 function showGeocodeStatus(msg, autoHideMs) {
   const box = document.getElementById('geocodeStatus');
@@ -633,50 +702,6 @@ function showGeocodeStatus(msg, autoHideMs) {
     clearTimeout(showGeocodeStatus._t);
     showGeocodeStatus._t = setTimeout(() => { box.style.display = 'none'; }, autoHideMs);
   }
-}
-
-// Uses OpenStreetMap's free Nominatim geocoding service - no API key or billing needed.
-// District-only lookups (this is the level that reliably geocodes for Cambodia).
-let lastGeocodeRequestAt = 0;
-
-function panMapToPlace(addressParts, zoomLevel) {
-  if (!map) return;
-  showGeocodeStatus('Searching map for that location...');
-  tryGeocodeOSM(addressParts, 0, zoomLevel);
-}
-
-function tryGeocodeOSM(addressParts, index, zoomLevel) {
-  if (index >= addressParts.length) {
-    showGeocodeStatus('Could not find that area on the map automatically. Please pan/zoom manually.', 4000);
-    return;
-  }
-  const query = addressParts.slice(index).join(', ') + ', Cambodia';
-  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kh&q=' + encodeURIComponent(query);
-
-  const now = Date.now();
-  const wait = Math.max(0, 1100 - (now - lastGeocodeRequestAt));
-  lastGeocodeRequestAt = now + wait;
-
-  setTimeout(() => {
-    fetch(url)
-      .then(r => r.json())
-      .then(results => {
-        if (results && results.length > 0) {
-          const lat = parseFloat(results[0].lat);
-          const lng = parseFloat(results[0].lon);
-          map.panTo({ lat, lng });
-          map.setZoom(index === 0 ? zoomLevel : Math.max(zoomLevel - (index * 2), 10));
-          showGeocodeStatus('Found: ' + results[0].display_name, 3000);
-        } else if (index + 1 < addressParts.length) {
-          tryGeocodeOSM(addressParts, index + 1, zoomLevel);
-        } else {
-          showGeocodeStatus('Could not find that area on the map automatically. Please pan/zoom manually.', 5000);
-        }
-      })
-      .catch(() => {
-        showGeocodeStatus('Location search failed (network error). Please pan/zoom manually.', 5000);
-      });
-  }, wait);
 }
 
 // ---------- Sign out ----------
