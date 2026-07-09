@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RC Location Map / ផែនទីទីតាំង RC</title>
+
+<!-- ====================================================================
+     SETUP: fill in these three values before deploying
+     ==================================================================== -->
+<script>
+  const GOOGLE_CLIENT_ID = "139380412075-23i2nbbp93ptgo01s7skq8bmc9d702to.apps.googleusercontent.com";
+  const GOOGLE_MAPS_API_KEY = "AIzaSyDIAZFEeStSgikgb9OYmLSCmmmUP7gz7ng";
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2EZFO6lDPTX6-bDlKJwGM5i5YHou7dfS6q5rIy-T76Fr7RtnbPqGd15wAq2Wyb3H_Dw/exec";
+</script>
+<!-- ==================================================================== -->
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Khmer OS', 'Noto Sans Khmer', Arial, sans-serif;
+    background: #f4f6f5;
+    color: #1f2d24;
+  }
+  #loginScreen {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+  #loginScreen h1 {
+    color: #1b5e20;
+    margin-bottom: 4px;
+  }
+  #loginScreen p {
+    color: #4a5c50;
+    max-width: 340px;
+  }
+  #errorBox {
+    color: #b3261e;
+    background: #fdecea;
+    border: 1px solid #f5c2c0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    display: none;
+    max-width: 340px;
+  }
+  #appScreen { display: none; height: 100vh; flex-direction: column; }
+  #topBar {
+    background: #1b5e20;
+    color: white;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #topBar .userInfo { font-size: 14px; }
+  #topBar button {
+    background: #2e7d32;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #topBar button:hover { background: #256428; }
+  #topBar button.secondary { background: #6d6d6d; }
+  #topBar button.secondary:hover { background: #555; }
+  #map { flex: 1; width: 100%; }
+  #pinPanel {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
+    padding: 16px;
+    z-index: 20;
+  }
+  #pinPanel label { display: block; margin-top: 10px; font-size: 13px; color: #444; }
+  #pinPanel input, #pinPanel textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  #pinPanel .rowBtns { display: flex; gap: 10px; margin-top: 14px; }
+  #pinPanel .rowBtns button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #savePinBtn { background: #1b5e20; color: white; }
+  #cancelPinBtn { background: #eee; color: #333; }
+  #pinModeHint {
+    display: none;
+    position: fixed;
+    top: 60px; left: 0; right: 0;
+    text-align: center;
+    background: #fff3cd;
+    color: #664d03;
+    padding: 8px;
+    font-size: 14px;
+    z-index: 15;
+  }
+  .infoWindowContent { font-size: 14px; }
+  .infoWindowContent .dirBtn {
+    display: inline-block;
+    margin-top: 6px;
+    background: #1b5e20;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+  }
+  #loadingOverlay {
+    position: fixed; inset: 0;
+    background: rgba(255,255,255,0.85);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; color: #1b5e20; z-index: 50;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <h1>RC Location Map</h1>
+  <p>ផែនទីទីតាំង RC — សម្រាប់បុគ្គលិកនិង CVC ដែលមានសិទ្ធិចូលប្រើប៉ុណ្ណោះ<br>
+  <span style="font-size:13px;">For authorized World Vision staff and CVC only.</span></p>
+  <div id="errorBox"></div>
+  <div id="googleSignInBtn"></div>
+</div>
+
+<!-- MAIN APP SCREEN -->
+<div id="appScreen">
+  <div id="topBar">
+    <div class="userInfo" id="userInfo"></div>
+    <div>
+      <button id="togglePinModeBtn">➕ Pin New RC / បញ្ចូលទីតាំងថ្មី</button>
+      <button class="secondary" id="signOutBtn">Sign out</button>
+    </div>
+  </div>
+  <div id="pinModeHint">📍 Tap on the map to place a pin at this RC's home / ចុចលើផែនទីដើម្បីកំណត់ទីតាំង</div>
+  <div id="map"></div>
+</div>
+
+<!-- PIN DETAILS PANEL (shown after tapping map in pin mode) -->
+<div id="pinPanel">
+  <strong>New RC Location / ទីតាំងថ្មី</strong>
+  <label>Child ID / លេខសម្គាល់កុមារ</label>
+  <input type="text" id="pinChildId" placeholder="e.g. KH-00123">
+  <label>Notes (optional) / កំណត់ចំណាំ</label>
+  <textarea id="pinNotes" rows="2" placeholder="e.g. house behind the pagoda"></textarea>
+  <div class="rowBtns">
+    <button id="cancelPinBtn">Cancel</button>
+    <button id="savePinBtn">Save Pin</button>
+  </div>
+</div>
+
+<div id="loadingOverlay" style="display:none;">Loading...</div>
+
+<script>
+let map, currentUser, idToken, tempMarker, pinMode = false;
+let markers = [];
+
+// ---------- Google Sign-In ----------
+window.onload = function() {
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('googleSignInBtn'),
+    { theme: 'filled_blue', size: 'large', text: 'signin_with' }
+  );
+};
+
+function handleCredentialResponse(response) {
+  idToken = response.credential;
+  showLoading(true);
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight on Apps Script
+    body: JSON.stringify({ action: 'login', idToken: idToken })
+  })
+  .then(r => r.json())
+  .then(data => {
+    showLoading(false);
+    if (!data.ok) {
+      showError(data.error || 'Login failed.');
+      return;
+    }
+    currentUser = data.user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display = 'flex';
+    document.getElementById('userInfo').textContent =
+      currentUser.name + ' (' + currentUser.role + ') — ' + currentUser.email;
+    initMapAndLoadMarkers(data.locations);
+  })
+  .catch(err => {
+    showLoading(false);
+    showError('Network error contacting server. ' + err.message);
+  });
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+function showLoading(on) {
+  document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
+}
+
+// ---------- Google Maps ----------
+function loadGoogleMapsScript() {
+  const script = document.createElement('script');
+  script.src = 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE_MAPS_API_KEY;
+  document.head.appendChild(script);
+}
+loadGoogleMapsScript();
+
+function initMapAndLoadMarkers(locations) {
+  // Default center: Phnom Penh. Will re-center on first pin if available.
+  const center = locations.length
+    ? { lat: parseFloat(locations[0].lat), lng: parseFloat(locations[0].lng) }
+    : { lat: 11.5564, lng: 104.9282 };
+
+  function setup() {
+    if (!window.google || !google.maps) { setTimeout(setup, 200); return; }
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: center,
+      zoom: 12
+    });
+
+    locations.forEach(addMarkerForLocation);
+
+    map.addListener('click', (e) => {
+      if (!pinMode) return;
+      openPinPanel(e.latLng.lat(), e.latLng.lng());
+    });
+  }
+  setup();
+}
+
+function addMarkerForLocation(loc) {
+  const marker = new google.maps.Marker({
+    position: { lat: parseFloat(loc.lat), lng: parseFloat(loc.lng) },
+    map: map,
+    title: 'Child ID: ' + loc.childId
+  });
+  const info = new google.maps.InfoWindow({
+    content: `<div class="infoWindowContent">
+        <strong>Child ID:</strong> ${escapeHtml(loc.childId)}<br>
+        ${loc.notes ? '<em>' + escapeHtml(loc.notes) + '</em><br>' : ''}
+        <span style="font-size:12px;color:#666;">Pinned by ${escapeHtml(loc.pinnedBy)}</span><br>
+        <a class="dirBtn" target="_blank"
+           href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}">
+           Get Directions</a>
+      </div>`
+  });
+  marker.addListener('click', () => info.open(map, marker));
+  markers.push(marker);
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, s => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[s]));
+}
+
+// ---------- Pin new location ----------
+document.getElementById('togglePinModeBtn').addEventListener('click', () => {
+  pinMode = !pinMode;
+  document.getElementById('pinModeHint').style.display = pinMode ? 'block' : 'none';
+});
+
+function openPinPanel(lat, lng) {
+  document.getElementById('pinPanel').style.display = 'block';
+  document.getElementById('pinPanel').dataset.lat = lat;
+  document.getElementById('pinPanel').dataset.lng = lng;
+  if (tempMarker) tempMarker.setMap(null);
+  tempMarker = new google.maps.Marker({
+    position: { lat, lng }, map, icon: {
+      path: google.maps.SymbolPath.CIRCLE, scale: 8,
+      fillColor: '#e65100', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2
+    }
+  });
+}
+
+document.getElementById('cancelPinBtn').addEventListener('click', closePinPanel);
+function closePinPanel() {
+  document.getElementById('pinPanel').style.display = 'none';
+  document.getElementById('pinChildId').value = '';
+  document.getElementById('pinNotes').value = '';
+  if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
+}
+
+document.getElementById('savePinBtn').addEventListener('click', () => {
+  const panel = document.getElementById('pinPanel');
+  const childId = document.getElementById('pinChildId').value.trim();
+  const notes = document.getElementById('pinNotes').value.trim();
+  if (!childId) { alert('Please enter the Child ID.'); return; }
+
+  showLoading(true);
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: 'addLocation',
+      idToken: idToken,
+      childId: childId,
+      lat: panel.dataset.lat,
+      lng: panel.dataset.lng,
+      notes: notes
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    showLoading(false);
+    if (!data.ok) { alert(data.error || 'Could not save.'); return; }
+    addMarkerForLocation({
+      childId, lat: panel.dataset.lat, lng: panel.dataset.lng,
+      pinnedBy: currentUser.email, notes
+    });
+    if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
+    closePinPanel();
+    pinMode = false;
+    document.getElementById('pinModeHint').style.display = 'none';
+  })
+  .catch(err => { showLoading(false); alert('Network error: ' + err.message); });
+});
+
+// ---------- Sign out ----------
+document.getElementById('signOutBtn').addEventListener('click', () => {
+  google.accounts.id.disableAutoSelect();
+  location.reload();
+});
+</script>
+</body>
+</html>
