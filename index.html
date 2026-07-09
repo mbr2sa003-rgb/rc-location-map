@@ -76,6 +76,36 @@
   #topBar button:hover { background: #256428; }
   #topBar button.secondary { background: #6d6d6d; }
   #topBar button.secondary:hover { background: #555; }
+  #searchBox { display: flex; gap: 6px; flex: 1; min-width: 200px; max-width: 320px; }
+  #searchBox input {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+  }
+  #searchBox button {
+    background: #f9a825;
+    color: #1f2d24;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  #searchBox button:hover { background: #f0ca67; }
+  #geocodeStatus {
+    display: none;
+    position: fixed;
+    top: 60px; left: 0; right: 0;
+    text-align: center;
+    background: #e3f2fd;
+    color: #0d47a1;
+    padding: 6px;
+    font-size: 13px;
+    z-index: 14;
+  }
   #map { flex: 1; width: 100%; }
   #pinPanel {
     display: none;
@@ -151,12 +181,17 @@
 <div id="appScreen">
   <div id="topBar">
     <div class="userInfo" id="userInfo"></div>
+    <div id="searchBox">
+      <input type="text" id="searchChildId" placeholder="Find RC by Child ID / ស្វែងរកតាមលេខសម្គាល់">
+      <button id="searchBtn">🔍 Find</button>
+    </div>
     <div>
       <button id="togglePinModeBtn">➕ Pin New RC / បញ្ចូលទីតាំងថ្មី</button>
       <button class="secondary" id="signOutBtn">Sign out</button>
     </div>
   </div>
   <div id="pinModeHint">📍 Tap on the map to place a pin at this RC's home / ចុចលើផែនទីដើម្បីកំណត់ទីតាំង</div>
+  <div id="geocodeStatus"></div>
   <div id="map"></div>
 </div>
 
@@ -189,6 +224,7 @@
 <script>
 let map, currentUser, idToken, tempMarker, pinMode = false;
 let markers = [];
+let markersByChildId = {}; // childId -> { marker, info }
 let roster = []; // { childId, name, district, commune, village }
 
 // ---------- Google Sign-In ----------
@@ -292,6 +328,7 @@ function addMarkerForLocation(loc) {
   });
   marker.addListener('click', () => info.open(map, marker));
   markers.push(marker);
+  markersByChildId[String(loc.childId).trim()] = { marker, info };
 }
 
 function escapeHtml(str) {
@@ -338,7 +375,7 @@ document.getElementById('pinDistrict').addEventListener('change', function() {
     communes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
   communeSel.disabled = false;
 
-  panMapToPlace(district + ', Cambodia', 11);
+  panMapToPlace([district], 11);
 });
 
 document.getElementById('pinCommune').addEventListener('change', function() {
@@ -360,7 +397,7 @@ document.getElementById('pinCommune').addEventListener('change', function() {
     villages.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   villageSel.disabled = false;
 
-  panMapToPlace(commune + ', ' + district + ', Cambodia', 13);
+  panMapToPlace([commune + ', ' + district, district], 13);
 });
 
 document.getElementById('pinVillage').addEventListener('change', function() {
@@ -379,20 +416,63 @@ document.getElementById('pinVillage').addEventListener('change', function() {
     children.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
   childSel.disabled = false;
 
-  panMapToPlace(village + ', ' + commune + ', ' + district + ', Cambodia', 15);
+  panMapToPlace([village + ', ' + commune + ', ' + district, commune + ', ' + district, district], 15);
 });
 
+// ---------- Search for a pinned RC by Child ID ----------
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('searchChildId').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doSearch();
+});
+function doSearch() {
+  const raw = document.getElementById('searchChildId').value.trim();
+  if (!raw) return;
+  const entry = markersByChildId[raw];
+  if (!entry) {
+    alert('No pinned location found for Child ID "' + raw + '". Check the ID, or this RC has not been pinned yet.');
+    return;
+  }
+  map.panTo(entry.marker.getPosition());
+  map.setZoom(17);
+  entry.info.open(map, entry.marker);
+}
+
 let geocoder = null;
-function panMapToPlace(address, zoomLevel) {
+function showGeocodeStatus(msg, autoHideMs) {
+  const box = document.getElementById('geocodeStatus');
+  box.textContent = msg;
+  box.style.display = msg ? 'block' : 'none';
+  if (autoHideMs) {
+    clearTimeout(showGeocodeStatus._t);
+    showGeocodeStatus._t = setTimeout(() => { box.style.display = 'none'; }, autoHideMs);
+  }
+}
+
+// Tries progressively shorter addresses if the full one isn't found -
+// e.g. "Village, Commune, District, Cambodia" -> "Commune, District, Cambodia" -> "District, Cambodia"
+function panMapToPlace(addressParts, zoomLevel) {
   if (!map || !window.google || !google.maps) return;
   if (!geocoder) geocoder = new google.maps.Geocoder();
+  showGeocodeStatus('Searching map for that location...');
+  tryGeocode(addressParts, 0, zoomLevel);
+}
+
+function tryGeocode(addressParts, index, zoomLevel) {
+  if (index >= addressParts.length) {
+    showGeocodeStatus('Could not find that area on the map automatically. Please pan/zoom manually.', 4000);
+    return;
+  }
+  const address = addressParts.slice(index).join(', ') + ', Cambodia';
   geocoder.geocode({ address: address, region: 'kh' }, (results, status) => {
     if (status === 'OK' && results[0]) {
       map.panTo(results[0].geometry.location);
-      map.setZoom(zoomLevel);
+      map.setZoom(index === 0 ? zoomLevel : Math.max(zoomLevel - (index * 2), 10));
+      showGeocodeStatus('Found: ' + results[0].formatted_address, 3000);
+    } else if (index + 1 < addressParts.length) {
+      tryGeocode(addressParts, index + 1, zoomLevel); // fall back to a broader search
+    } else {
+      showGeocodeStatus('Could not find that area on the map automatically (status: ' + status + '). Please pan/zoom manually.', 5000);
     }
-    // If geocoding fails (e.g. name not recognized), silently do nothing -
-    // the CVC can still find the spot manually and pin mode still works.
   });
 }
 
