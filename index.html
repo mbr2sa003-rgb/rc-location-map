@@ -87,7 +87,7 @@
     z-index: 20;
   }
   #pinPanel label { display: block; margin-top: 10px; font-size: 13px; color: #444; }
-  #pinPanel input, #pinPanel textarea {
+  #pinPanel input, #pinPanel textarea, #pinPanel select {
     width: 100%;
     padding: 8px;
     border: 1px solid #ccc;
@@ -163,8 +163,19 @@
 <!-- PIN DETAILS PANEL (shown after tapping map in pin mode) -->
 <div id="pinPanel">
   <strong>New RC Location / ទីតាំងថ្មី</strong>
-  <label>Child ID / លេខសម្គាល់កុមារ</label>
-  <input type="text" id="pinChildId" placeholder="e.g. KH-00123">
+
+  <label>District / ស្រុក</label>
+  <select id="pinDistrict"><option value="">-- Select District --</option></select>
+
+  <label>Commune / ឃុំ</label>
+  <select id="pinCommune" disabled><option value="">-- Select District first --</option></select>
+
+  <label>Village / ភូមិ</label>
+  <select id="pinVillage" disabled><option value="">-- Select Commune first --</option></select>
+
+  <label>Child / កុមារ</label>
+  <select id="pinChildSelect" disabled><option value="">-- Select Village first --</option></select>
+
   <label>Notes (optional) / កំណត់ចំណាំ</label>
   <textarea id="pinNotes" rows="2" placeholder="e.g. house behind the pagoda"></textarea>
   <div class="rowBtns">
@@ -178,6 +189,7 @@
 <script>
 let map, currentUser, idToken, tempMarker, pinMode = false;
 let markers = [];
+let roster = []; // { childId, name, district, commune, village }
 
 // ---------- Google Sign-In ----------
 window.onload = function() {
@@ -207,10 +219,12 @@ function handleCredentialResponse(response) {
       return;
     }
     currentUser = data.user;
+    roster = data.roster || [];
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appScreen').style.display = 'flex';
     document.getElementById('userInfo').textContent =
       currentUser.name + ' (' + currentUser.role + ') — ' + currentUser.email;
+    populateDistrictDropdown();
     initMapAndLoadMarkers(data.locations);
   })
   .catch(err => {
@@ -263,11 +277,12 @@ function addMarkerForLocation(loc) {
   const marker = new google.maps.Marker({
     position: { lat: parseFloat(loc.lat), lng: parseFloat(loc.lng) },
     map: map,
-    title: 'Child ID: ' + loc.childId
+    title: 'Child ID: ' + loc.childId + (loc.childName ? ' - ' + loc.childName : '')
   });
   const info = new google.maps.InfoWindow({
     content: `<div class="infoWindowContent">
         <strong>Child ID:</strong> ${escapeHtml(loc.childId)}<br>
+        ${loc.childName ? '<strong>Name:</strong> ' + escapeHtml(loc.childName) + '<br>' : ''}
         ${loc.notes ? '<em>' + escapeHtml(loc.notes) + '</em><br>' : ''}
         <span style="font-size:12px;color:#666;">Pinned by ${escapeHtml(loc.pinnedBy)}</span><br>
         <a class="dirBtn" target="_blank"
@@ -291,6 +306,76 @@ document.getElementById('togglePinModeBtn').addEventListener('click', () => {
   document.getElementById('pinModeHint').style.display = pinMode ? 'block' : 'none';
 });
 
+function uniqueSorted(arr) {
+  return [...new Set(arr.filter(Boolean))].sort();
+}
+
+function populateDistrictDropdown() {
+  const sel = document.getElementById('pinDistrict');
+  const districts = uniqueSorted(roster.map(r => r.district));
+  sel.innerHTML = '<option value="">-- Select District --</option>' +
+    districts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+}
+
+document.getElementById('pinDistrict').addEventListener('change', function() {
+  const district = this.value;
+  const communeSel = document.getElementById('pinCommune');
+  const villageSel = document.getElementById('pinVillage');
+  const childSel = document.getElementById('pinChildSelect');
+
+  villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
+  villageSel.disabled = true;
+  childSel.innerHTML = '<option value="">-- Select Village first --</option>';
+  childSel.disabled = true;
+
+  if (!district) {
+    communeSel.innerHTML = '<option value="">-- Select District first --</option>';
+    communeSel.disabled = true;
+    return;
+  }
+  const communes = uniqueSorted(roster.filter(r => r.district === district).map(r => r.commune));
+  communeSel.innerHTML = '<option value="">-- Select Commune --</option>' +
+    communes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  communeSel.disabled = false;
+});
+
+document.getElementById('pinCommune').addEventListener('change', function() {
+  const district = document.getElementById('pinDistrict').value;
+  const commune = this.value;
+  const villageSel = document.getElementById('pinVillage');
+  const childSel = document.getElementById('pinChildSelect');
+
+  childSel.innerHTML = '<option value="">-- Select Village first --</option>';
+  childSel.disabled = true;
+
+  if (!commune) {
+    villageSel.innerHTML = '<option value="">-- Select Commune first --</option>';
+    villageSel.disabled = true;
+    return;
+  }
+  const villages = uniqueSorted(roster.filter(r => r.district === district && r.commune === commune).map(r => r.village));
+  villageSel.innerHTML = '<option value="">-- Select Village --</option>' +
+    villages.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  villageSel.disabled = false;
+});
+
+document.getElementById('pinVillage').addEventListener('change', function() {
+  const district = document.getElementById('pinDistrict').value;
+  const commune = document.getElementById('pinCommune').value;
+  const village = this.value;
+  const childSel = document.getElementById('pinChildSelect');
+
+  if (!village) {
+    childSel.innerHTML = '<option value="">-- Select Village first --</option>';
+    childSel.disabled = true;
+    return;
+  }
+  const children = roster.filter(r => r.district === district && r.commune === commune && r.village === village);
+  childSel.innerHTML = '<option value="">-- Select Child --</option>' +
+    children.map(c => `<option value="${escapeHtml(c.childId)}">${escapeHtml(c.childId)} - ${escapeHtml(c.name)}</option>`).join('');
+  childSel.disabled = false;
+});
+
 function openPinPanel(lat, lng) {
   document.getElementById('pinPanel').style.display = 'block';
   document.getElementById('pinPanel').dataset.lat = lat;
@@ -307,16 +392,24 @@ function openPinPanel(lat, lng) {
 document.getElementById('cancelPinBtn').addEventListener('click', closePinPanel);
 function closePinPanel() {
   document.getElementById('pinPanel').style.display = 'none';
-  document.getElementById('pinChildId').value = '';
+  document.getElementById('pinDistrict').value = '';
+  document.getElementById('pinCommune').innerHTML = '<option value="">-- Select District first --</option>';
+  document.getElementById('pinCommune').disabled = true;
+  document.getElementById('pinVillage').innerHTML = '<option value="">-- Select Commune first --</option>';
+  document.getElementById('pinVillage').disabled = true;
+  document.getElementById('pinChildSelect').innerHTML = '<option value="">-- Select Village first --</option>';
+  document.getElementById('pinChildSelect').disabled = true;
   document.getElementById('pinNotes').value = '';
   if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
 }
 
 document.getElementById('savePinBtn').addEventListener('click', () => {
   const panel = document.getElementById('pinPanel');
-  const childId = document.getElementById('pinChildId').value.trim();
+  const childSel = document.getElementById('pinChildSelect');
+  const childId = childSel.value;
+  const childName = childId ? (childSel.options[childSel.selectedIndex].textContent.split(' - ').slice(1).join(' - ')) : '';
   const notes = document.getElementById('pinNotes').value.trim();
-  if (!childId) { alert('Please enter the Child ID.'); return; }
+  if (!childId) { alert('Please select a Child from the list.'); return; }
 
   showLoading(true);
   fetch(APPS_SCRIPT_URL, {
@@ -336,7 +429,7 @@ document.getElementById('savePinBtn').addEventListener('click', () => {
     showLoading(false);
     if (!data.ok) { alert(data.error || 'Could not save.'); return; }
     addMarkerForLocation({
-      childId, lat: panel.dataset.lat, lng: panel.dataset.lng,
+      childId, childName, lat: panel.dataset.lat, lng: panel.dataset.lng,
       pinnedBy: currentUser.email, notes
     });
     if (tempMarker) { tempMarker.setMap(null); tempMarker = null; }
